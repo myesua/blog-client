@@ -4,7 +4,7 @@ const nextConfig = {
   swcMinify: true,
   eslint: { ignoreDuringBuilds: true },
   env: {
-    API_URI: 'http://localhost:8080/api',
+    API_URI: 'https://bg-api.onrender.com/api',
   },
   images: {
     domains: ['res.cloudinary.com', 'cdn.pixabay.com'],

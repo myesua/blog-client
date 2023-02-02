@@ -1,19 +1,18 @@
 import card from './nextpost.module.css';
 import Link from 'next/link';
-import Image from 'next/image';
 
-function NextPost({ post }: any) {
+const NextPost = ({ post }) => {
   return (
     <article className={card.container}>
       <div className={card.head}>
-        <Link href={`/post/${post.slug}`}>
+        <Link href={`/post/${post.slug}`} legacyBehavior>
           <a>
             <img src={post.banner} className={card.image} alt="Post Image" />
           </a>
         </Link>
       </div>
       <div className={card.body}>
-        <Link href={`/post/${post.slug}`}>
+        <Link href={`/post/${post.slug}`} legacyBehavior>
           <a>
             <h3 className={card.title}>{post.title}</h3>
           </a>
@@ -22,16 +21,16 @@ function NextPost({ post }: any) {
         <p className={card.reading__time}>{post.readingTime}</p>
       </div>
       <div className={card.categories}>
-        {post?.categories.map((category: any, index: any) => {
+        {post.categories.map((category: string, index: number) => {
           return (
-            <Link href={`/?cat=${category}`} key={index}>
+            <Link href={`/?cat=${category}`} key={index} legacyBehavior>
               <a className={card.tag}>{category.toLowerCase()}</a>
             </Link>
           );
         })}
       </div>
       <div className={card.author}>
-        <Link href={`/?user=${post.author}`}>
+        <Link href={`/?author=${post.author}`} legacyBehavior>
           <a>
             <img
               src={post.avatar}
@@ -46,6 +45,6 @@ function NextPost({ post }: any) {
       </div>
     </article>
   );
-}
+};
 
 export default NextPost;

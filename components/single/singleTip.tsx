@@ -1,63 +1,27 @@
 import React, { Key, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/future/image';
+import Image from 'next/legacy/image';
 import { useRouter } from 'next/router';
 
 import styles from './single.module.css';
-import 'react-quill/dist/quill.snow.css';
+import hStyles from '../header/Header.module.css';
+import sStyles from '../search/styles.module.css';
 
-import facebook from '../../public/images/facebook.svg';
-import linkedin from '../../public/images/linkedin.svg';
-import twitter from '../../public/images/twitter.svg';
+import facebook from '../../public/icons/facebook.svg';
+import linkedin from '../../public/icons/linkedin.svg';
+import twitter from '../../public/icons/twitter.svg';
 import advertsample from '../../public/images/advertsample.png';
-import arrow from '../../public/down.svg';
-import EditIcon from '../../public/edit.svg';
-import DeleteIcon from '../../public/delete.svg';
+import arrow from '../../public/icons/down.svg';
+import MenuIcon from '../../public/icons/menuicon.svg';
 
 import axios from 'axios';
 import DOMPurify from 'dompurify';
-import dynamic from 'next/dynamic';
 
-import { Context } from '../../context/context';
-import Header from '../header/Header';
 import NextTip from '../tip/nextTip';
 import Post from '../post/post';
 import Subscription from '../subscription/subscription';
 import Footer from '../footer/Footer';
-
-const ReactQuill = dynamic(() => import('react-quill'), {
-  ssr: false,
-});
-
-const modules = {
-  toolbar: [
-    [{ font: [] }],
-    [{ header: [1, 2, 3, 4, 5, 6, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ color: [] }, { background: [] }],
-    [{ script: 'sub' }, { script: 'super' }],
-    ['blockquote', 'code-block'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    [{ indent: '-1' }, { indent: '+1' }, { align: [] }],
-    ['link', 'image', 'video'],
-    ['clean'],
-  ],
-};
-
-const readingDuration = [
-  {
-    value: '2 mins read',
-  },
-  {
-    value: '3 mins read',
-  },
-  {
-    value: '5 mins read',
-  },
-  {
-    value: '7 mins read',
-  },
-];
+import { Context } from '../../context/context';
 
 function shuffle(a: any) {
   let j, x, i;
@@ -70,172 +34,86 @@ function shuffle(a: any) {
   return a;
 }
 
-const SingleTip = ({ tip }: any) => {
-  const [isOpen, setOpen] = useState(false);
-  const [rating, setRating] = useState(0);
+const SingleTip = ({ tip }) => {
+  const { tips } = useContext(Context);
+  const [rating, setRating] = useState(tip.rating || 0);
   const [hover, setHover] = useState(0);
   const [starState, setStarState] = useState(false);
-  const [cats, setCats] = useState([]);
-  const [posts, setPosts] = useState([]);
-  const [nextTips, setNextTips] = useState([]);
 
-  const { user } = useContext(Context);
-  let authorAvatar = user && user.profilePicture;
-  const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
-  const author = user?.firstname + ' ' + user?.lastname;
+  const refEl = ref.current;
+  const router = useRouter();
+  const [info, setInfo] = useState('');
+  const [ratingInfo, setRatingInfo] = useState('');
 
-  const [title, setTitle] = useState(tip.title);
-  const [description, setDescription] = useState(tip.description);
-  const [banner, setBanner] = useState(tip.banner);
-  const [categories, setCategories] = useState(tip.categories);
-  const [readingTime, setReadingTime] = useState(tip.readingTime);
-  const [content, setContent] = useState(tip.content);
+  const ref2 = useRef<HTMLDivElement>(null);
+  const [isOpen, setOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
-  const [loaded, setLoaded] = useState(false);
+  const rRef = useRef<HTMLDivElement>(null);
+  const rRefEl = rRef.current;
 
-  /**Get post categories from server */
-  useEffect(() => {
-    const getCategories = async () => {
-      const res = await axios.get(`${process.env.API_URI}/categories`);
-      setCats(res.data);
-    };
-    const getNextTip = async () => {
-      const res = await axios.get(`${process.env.API_URI}/tips`);
-      setNextTips(res.data);
-    };
-    const getPosts = async () => {
-      const res = await axios.get(`${process.env.API_URI}/posts`);
-      setPosts(res.data);
-    };
-    getPosts;
-    getNextTip();
-    getCategories();
-  }, []);
+  const [query, setQuery] = useState('');
+  const [searchResult, setSearchResult] = useState([]);
+
+  const { state } = useContext(Context);
+  const { auth } = state;
 
   useEffect(() => {
-    const checkOutsideClick = (e: any) => {
-      if (isOpen && ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
+    setHydrated(true);
+  }, [hydrated]);
+
+  useEffect(() => {
+    const getSearchResults = async () => {
+      if (!query || query.length === 0 || query.length > 3) {
+        setSearchResult([]);
+        return false;
+      }
+      if (query.length > 2) {
+        const res = await axios.get(`${process.env.POSTS_URL}`, {
+          params: {
+            search: query,
+          },
+        });
+        setSearchResult(res.data);
       }
     };
+    getSearchResults();
+  }, [query]);
 
-    document.addEventListener('mousedown', checkOutsideClick);
-
-    return () => {
-      document.removeEventListener('mousedown', checkOutsideClick);
-    };
-  }, [isOpen]);
-
-  /**Hook to toggle `updateForm` when author clicks edit button */
-
-  useEffect(() => {
-    const overlay = document.getElementById('blur-overlay') as HTMLDivElement;
-    const editIcon = document.querySelector('#edit-icon') as HTMLImageElement;
-    const updateForm = document.getElementById('update') as HTMLElement;
-    const toggleUpdateForm = () => {
-      setLoaded(true);
-      overlay.style.display = 'block';
-      updateForm.style.display = 'block';
-      document.body.style.overflow = 'hidden';
-    };
-    tip.author === author &&
-      editIcon.addEventListener('click', toggleUpdateForm);
-
-    let newCategories: string[] = [];
-    const categoriesEl =
-      document.querySelectorAll<HTMLElement>('#category-option');
-
-    categoriesEl.forEach((option) => {
-      let selected = false;
-      const CustomSelect = () => {
-        if (!selected) {
-          selected = true;
-          if (
-            !newCategories.includes(option.innerText) &&
-            !option.hasAttribute('style')
-          ) {
-            newCategories.push(option.innerText);
-            setCategories(newCategories);
-            option.setAttribute(
-              'style',
-              'background: #396afc; color: #fff; transition: background 0.1s',
-            );
-          }
-        } else if (option.hasAttribute('style')) {
-          selected = false;
-          newCategories.pop();
-          setCategories(newCategories);
-          option.removeAttribute('style');
-        }
-      };
-      if (tip.categories.includes(option.innerText)) {
-        selected = true;
-        newCategories.push(option.innerText);
-        setCategories(newCategories);
-        option.setAttribute(
-          'style',
-          'background: #396afc; color: #fff; transition: background 0.1s',
-        );
-      }
-
-      option.addEventListener('click', CustomSelect);
-
-      return {
-        newCategories,
-      };
-    });
-  }, [loaded]);
-
-  /**Handle Tip update */
-  const handleUpdate = async () => {
-    try {
-      await axios.put(`${process.env.API_URI}/tips/${tip._id}`, {
-        author: author,
-        title: title,
-        description: description,
-        banner: banner,
-        categories: categories,
-        readingTime: readingTime,
-        content: content,
-        slug: title.toLowerCase().split(' ').join('-').replace(/\?/g, ''),
-        avatar: authorAvatar,
-      });
-      console.log('🎉', 'Your post has been updated successfully!');
-      window.location.replace('/');
-    } catch (err) {
-      console.log(err);
-    }
+  const handleInput = (e: any) => {
+    setQuery(e.target.value);
   };
 
-  /**Handle Tip delete */
-  const handleModal = () => {
+  const handleHiddenNav = () => {
     setOpen(!isOpen);
   };
 
-  const handleDelete = async () => {
+  const handleRating = async () => {
     try {
-      await axios.delete(`${process.env.API_URI}/tips/${tip._id}`, {
-        data: { author: author },
+      const res = await axios.post(`${process.env.TIPS_URL}/tip/${tip._id}`, {
+        rating,
       });
-      router.push('/');
+      setInfo(res.data.message);
     } catch (err) {
-      console.log(err);
+      if (err.message === 'Network Error')
+        return <h1 style={styles}>500 - Server-side error occurred</h1>;
+      else if (
+        err.response.data ==
+        'Too many requests coming from this IP, please try again after 15 minutes.'
+      ) {
+        setInfo(err.response.data);
+      } else setInfo(err.response.data.message);
     }
   };
 
-  // Handle rating stars
-  const handleStar = (e: any) => {
-    if (!starState) {
-      setStarState(true);
-      e.target.style.fill = '#FFE76D';
-      return;
-    } else {
-      setStarState(false);
-      e.target.style.fill = '#FFFFFF';
-      return;
-    }
-  };
+  const rInfoStyle = ratingInfo
+    ? `${styles.rating__info} ${styles.animate}`
+    : styles.rating__info;
+
+  if (ratingInfo && rRef && rRefEl) {
+    rRefEl.addEventListener('animationend', () => window.location.reload());
+  }
 
   // To prevent XSS vulnerabilities
   const sanitizeData = () => ({
@@ -263,280 +141,397 @@ const SingleTip = ({ tip }: any) => {
     )}&title=${encodeURIComponent(url)}`;
   };
 
+  const iStyles = {
+    display: 'grid',
+    placeItems: 'center',
+    height: '100vh',
+    width: '100%',
+    color: 'var(--error-color)',
+  };
+
+  if (info) {
+    return (
+      <div style={iStyles}>
+        <div>{info}</div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.headerDiv}>
-        <Header />
-      </div>
-      <div className={styles.formContainer}>
-        <div className={styles.form} id="update">
-          <h1 className={styles.form__header}>Update tip</h1>
-          <div
-            className={styles.input}
-            contentEditable="true"
-            onInput={(e: any) => setTitle(e.target.innerText)}
-            suppressContentEditableWarning={true}>
-            {tip.title}
-          </div>
-
-          <div
-            className={styles.input}
-            contentEditable="true"
-            onInput={(e: any) => setDescription(e.target.innerText)}
-            suppressContentEditableWarning={true}>
-            {tip.description}
-          </div>
-          <div
-            className={styles.input}
-            contentEditable="true"
-            onInput={(e: any) => setBanner(e.target.innerText)}
-            suppressContentEditableWarning={true}>
-            {tip.banner}
-          </div>
-
-          <div className={styles.categories__options} id="categories-options">
-            {cats.map((cat: any, index: Key) => {
-              return (
-                <span
-                  key={index}
-                  className={styles.cat__option}
-                  id="category-option">
-                  {cat.name.toLowerCase()}
+        <div className={hStyles.header}>
+          <nav className={hStyles.nav}>
+            <div className={hStyles.logo}>
+              <Image
+                src={MenuIcon}
+                width={25}
+                height={25}
+                layout="fixed"
+                alt=""
+                onClick={handleHiddenNav}
+                priority
+              />
+              <Link href="/" legacyBehavior>
+                <span>
+                  <a>Bechellente</a>
                 </span>
-              );
-            })}
-          </div>
+              </Link>
+            </div>
+            <ul className={hStyles.toplinks}>
+              <li>
+                <Link href="/" legacyBehavior>
+                  <a>Home</a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/products" legacyBehavior>
+                  <a>Products</a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/services" legacyBehavior>
+                  <a>Services</a>
+                </Link>
+              </li>
+              {hydrated && auth === 'false' ? (
+                <li>
+                  <Link href="/login" legacyBehavior>
+                    <a>Login</a>
+                  </Link>
+                </li>
+              ) : (
+                <li>
+                  <Link href="/dashboard" legacyBehavior>
+                    <a>Dashboard</a>
+                  </Link>
+                </li>
+              )}
+            </ul>
+            <span className={hStyles.topsearch}>
+              <input
+                type="search"
+                placeholder="Search blog posts"
+                id="search-input"
+                onInput={handleInput}
+              />
+            </span>
+            {isOpen && (
+              <div className={hStyles.hiddenNav} ref={ref2}>
+                <ul>
+                  <li>
+                    <Link href="/" legacyBehavior>
+                      <a onClick={handleHiddenNav}>Home</a>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/" legacyBehavior>
+                      <a onClick={handleHiddenNav}>About us</a>
+                    </Link>
+                  </li>
 
-          <div>
-            <select
-              className={styles.options}
-              name="reading-time"
-              onChange={(e) => setReadingTime(e.target.value)}
-              required>
-              <option value={tip.readingTime}>{tip.readingTime}</option>
-              {readingDuration.map((duration, index) => {
-                while (duration.value !== tip.readingTime) {
-                  return (
-                    <option value={duration.value} key={index}>
-                      {duration.value}
-                    </option>
-                  );
-                }
-              })}
-            </select>
-          </div>
-          <ReactQuill
-            modules={modules}
-            theme="snow"
-            defaultValue={tip.content}
-            onChange={setContent}
-            placeholder="Content goes here..."
-          />
-
-          <div className={styles.submitButtonContainer}>
-            <button onClick={handleUpdate} className={styles.submitButton}>
-              Submit
-            </button>
-          </div>
+                  <li>
+                    {auth === 'false' ? (
+                      <Link href="/login" legacyBehavior>
+                        <a onClick={handleHiddenNav}>Login</a>
+                      </Link>
+                    ) : (
+                      <Link href="/dashboard" legacyBehavior>
+                        <a onClick={handleHiddenNav}>Dashboard</a>
+                      </Link>
+                    )}
+                  </li>
+                  <li>
+                    <Link href="#latest" legacyBehavior>
+                      <a onClick={handleHiddenNav}>Latest</a>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#popular" legacyBehavior>
+                      <a onClick={handleHiddenNav}>Popular</a>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#tips" legacyBehavior>
+                      <a onClick={handleHiddenNav}>Tips</a>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </nav>
         </div>
       </div>
-      <div className={styles.blur__overlay} id="blur-overlay"></div>
-      <article className={styles.container}>
-        <header className={styles.header}>
-          <div className={styles.top__section}>
-            <h1>{tip.title}</h1>
-            {tip.author === author && (
-              <div className={styles.owner__icons}>
-                <Image
-                  src={EditIcon}
-                  width={30}
-                  height={20}
-                  id="edit-icon"
-                  alt=""
-                  priority
-                />
-                <Image
-                  src={DeleteIcon}
-                  width={30}
-                  height={20}
-                  alt=""
-                  onClick={handleModal}
-                  priority
-                />
+      <div className={sStyles.parent__wrapper}>
+        {query ? (
+          <div>
+            <h1 className={sStyles.hOnes} id="tips">
+              Search Results for - '{query}'
+            </h1>
+            {query && searchResult.length == 0 ? (
+              <div className={sStyles.no__result}>
+                No result found. Try again with another query.
+              </div>
+            ) : (
+              <div
+                className={sStyles.search__output__wrapper}
+                id="search-output-box">
+                {searchResult.map(
+                  (result: {
+                    _id: string;
+                    type: string;
+                    title: string;
+                    slug: string;
+                    description: string;
+                    content: string;
+                    author: string;
+                    categories: Array<string>;
+                    avatar: string;
+                    readingTime: string;
+                    views: number;
+                    createdAt: Date;
+                  }) => {
+                    let a = 'post',
+                      b = 'tip';
+                    let type: string;
+                    if (result.type === a) {
+                      type = a;
+                    } else {
+                      type = b;
+                    }
+                    return (
+                      <Link href={`/${type}/${result.slug}`} key={result._id}>
+                        <div className={sStyles.search__output__box}>
+                          <div className={sStyles.search__output__box__text}>
+                            <div
+                              className={
+                                sStyles.search__output__box__text__title
+                              }>
+                              {result.title}
+                            </div>
+                            <div
+                              className={
+                                sStyles.search__output__box__text__desc
+                              }>
+                              {result.description}
+                            </div>
+                            <div
+                              className={sStyles.search__output__box__others}>
+                              <span>
+                                {new Date(result.createdAt)
+                                  .toDateString()
+                                  .slice(4)}
+                              </span>
+                              <span>{result.views} views</span>
+                              <span>{result.readingTime}</span>
+                            </div>
+                          </div>
+                          <div className={sStyles.search__output__box__icon}>
+                            <i className="fa-solid fa-circle-arrow-right"></i>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  },
+                )}
               </div>
             )}
           </div>
-          {isOpen && (
-            <div className={styles.modal} ref={ref}>
-              <span
-                className={styles.hiddenNav__closebtn}
-                onClick={handleModal}>
-                ⨉
-              </span>
-              <div className={styles.prompt}>
-                Are you sure you wanted to delete this post?
+        ) : (
+          <article className={styles.container}>
+            <header className={styles.header}>
+              <div className={styles.top__section}>
+                <h1>{tip.title}</h1>
               </div>
-              <div className={styles.button__container}>
-                <button onClick={handleDelete}>Yes</button>
-                <button onClick={handleModal}>No</button>
-              </div>
-            </div>
-          )}
-          <p className={styles.post__description}>{tip.description}</p>
-        </header>
 
-        <section className={styles.main}>
-          <div className={styles.author}>
-            <div className={styles.author__info}>
-              <Link href={`/?user=${tip.author}`}>
-                <a>
-                  <img
-                    src={tip.avatar}
-                    className={styles.avatar}
-                    alt="Profile Image"
-                  />
-                </a>
-              </Link>
-              <span>{tip.author}</span>
-            </div>
-            <time>
-              {tip.updatedAt > tip.createdAt
-                ? 'Last edited on' +
-                  ' ' +
-                  new Date(tip.updatedAt).toDateString().slice(4)
-                : new Date(tip.createdAt).toDateString().slice(4)}
-            </time>
-          </div>
-          <div className={styles.top}>
-            <Image
-              src={tip.banner}
-              width="0"
-              height="0"
-              sizes="100vw"
-              className={styles.top__image}
-              alt="Post Image"
-            />
-          </div>
-
-          <div className={styles.article}>
-            <div className={styles.article__body}>
-              <div
-                className={styles.body}
-                dangerouslySetInnerHTML={sanitizeData()}></div>
-
-              <div className={styles.footer}>
-                <span className={styles.footer__head}>
-                  Please let us know what you think about this article
-                </span>
-                <br />
-                <span className={styles.footer__text}>
-                  How would you rate this aricle?
-                </span>
-                <div className={styles.stars} id="stars">
-                  {[...Array(5)].map((star, index) => {
-                    index += 1;
-                    return (
-                      <button
-                        type="button"
-                        key={index}
-                        className={
-                          index <= (rating || hover) ? styles.on : styles.off
-                        }
-                        onClick={() => setRating(index)}
-                        onMouseEnter={() => setHover(index)}
-                        onMouseLeave={() => setHover(rating)}
-                        onDoubleClick={() => {
-                          setRating(0);
-                          setHover(0);
-                        }}>
-                        <span className={styles.star}>&#9733;</span>
-                      </button>
-                    );
-                  })}
+              <p className={styles.post__description}>{tip.description}</p>
+            </header>
+            <section className={styles.main}>
+              <div className={styles.author}>
+                <div className={styles.author__info}>
+                  <Link href={`/?author=${tip.author}`} legacyBehavior>
+                    <a>
+                      <img
+                        src={tip.avatar}
+                        className={styles.avatar}
+                        alt="Profile Image"
+                      />
+                    </a>
+                  </Link>
+                  <span>{tip.author}</span>
                 </div>
-                <Link href="/">
-                  <button className={styles.continue} type="button">
-                    Continue
-                  </button>
-                </Link>
+                {tip.lastUpdated && (
+                  <time>
+                    Last edited on
+                    {' ' + new Date(tip.lastUpdated).toDateString().slice(4)}
+                  </time>
+                )}
               </div>
-            </div>
-            <aside className={styles.aside}>
-              <div className={styles.tags}>
-                <ul className={styles.tags__links}>
-                  {tip.categories.map((cat: any, index: Key) => {
-                    return (
-                      <Link href={`/?cat=${cat}`} key={index}>
-                        <a>
-                          <li>{cat}</li>
-                        </a>
-                      </Link>
-                    );
-                  })}
-                </ul>
+              <div className={styles.top}>
+                <Image
+                  src={tip.banner}
+                  width="0"
+                  height="0"
+                  sizes="100vw"
+                  className={styles.top__image}
+                  alt="Post Image"
+                  priority
+                />
               </div>
-              <div className={styles.share}>
-                <h5>Share article</h5>
-                <ul className={styles.share__links}>
-                  <li>
-                    <img alt="twitter" src={facebook.src} onClick={shareOnFB} />
-                  </li>
-                  <li>
-                    <img
-                      alt="twitter"
-                      src={twitter.src}
-                      onClick={shareOnTwitter}
-                    />
-                  </li>
-                  <li>
-                    <img
-                      alt="twitter"
-                      src={linkedin.src}
-                      onClick={shareOnLinkedIn}
-                    />
-                  </li>
-                </ul>
-              </div>
-              <div className={styles.advertsample}>
-                <a href="#">
-                  <img src={advertsample.src} alt="Image" />
-                </a>
-              </div>
-              <div className={styles.related}>
-                <h5>Related</h5>
-                <div className={styles.related__child}>
-                  {posts.slice(0, 3).map((post: any) => {
-                    const match = tip.categories.some((i: any) =>
-                      tip.categories.includes(i),
-                    );
-                    if (match == true)
-                      return <Post post={post} key={post._id} />;
-                  })}
-                </div>
-              </div>
-            </aside>
-          </div>
-        </section>
 
-        <section className={styles.readnext}>
-          <div>
-            <Link href={`/tip/${tip.slug}`}>
-              <a className={styles.readnext__head}>
-                <Image src={arrow} width={15} height={25} alt="arrow" />
+              <div className={styles.article}>
+                <div className={styles.article__body}>
+                  <div
+                    className={styles.body}
+                    dangerouslySetInnerHTML={sanitizeData()}></div>
+
+                  <div className={styles.footer}>
+                    <span className={styles.footer__head}>
+                      Please let us know what you think about this article
+                    </span>
+                    <br />
+                    <span className={styles.footer__text}>
+                      How would you rate this aricle?
+                    </span>
+                    <div className={styles.stars} id="stars">
+                      {[...Array(5)].map((star, index) => {
+                        index += 1;
+                        return (
+                          <button
+                            type="button"
+                            key={index}
+                            className={
+                              index <= (rating || hover)
+                                ? styles.on
+                                : styles.off
+                            }
+                            onClick={() => setRating(index)}
+                            onMouseEnter={() => setHover(index)}
+                            onMouseLeave={() => setHover(rating)}
+                            onDoubleClick={() => {
+                              setRating(0);
+                              setHover(0);
+                            }}>
+                            <span className={styles.star}>&#9733;</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      className={styles.continue}
+                      type="submit"
+                      onClick={handleRating}>
+                      Rate
+                    </button>
+                    {ratingInfo && (
+                      <span className={rInfoStyle} ref={rRef}>
+                        {ratingInfo}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <aside className={styles.aside}>
+                  <div className={styles.tags}>
+                    <ul className={styles.tags__links}>
+                      {tip.categories.map((cat: string, index: Key) => {
+                        return (
+                          <Link
+                            href={`/?cat=${cat}`}
+                            key={index}
+                            legacyBehavior>
+                            <a>
+                              <li>{cat}</li>
+                            </a>
+                          </Link>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                  <div className={styles.share}>
+                    <h5>Share article</h5>
+                    <ul className={styles.share__links}>
+                      <li>
+                        <img
+                          alt="twitter"
+                          src={facebook.src}
+                          onClick={shareOnFB}
+                        />
+                      </li>
+                      <li>
+                        <img
+                          alt="twitter"
+                          src={twitter.src}
+                          onClick={shareOnTwitter}
+                        />
+                      </li>
+                      <li>
+                        <img
+                          alt="twitter"
+                          src={linkedin.src}
+                          onClick={shareOnLinkedIn}
+                        />
+                      </li>
+                    </ul>
+                  </div>
+                  <div className={styles.advertsample}>
+                    <a href="#">
+                      <img src={advertsample.src} alt="Image" />
+                    </a>
+                  </div>
+                  <div className={styles.related}>
+                    <h5>Related</h5>
+                    <div className={styles.related__child}>
+                      {tips
+                        .slice(0, 3)
+                        .map(
+                          (next: {
+                            _id: string;
+                            title: string;
+                            slug: string;
+                            description: string;
+                            content: string;
+                            author: string;
+                            categories: Array<string>;
+                            avatar: string;
+                            readingTime: string;
+                          }) => {
+                            const match = tip.categories.some((i: string) => {
+                              next.categories.includes(i);
+                            });
+                            if (match == true && next.title !== tip.title)
+                              return <NextTip tip={next} key={next._id} />;
+                          },
+                        )}
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </section>
+
+            <section className={styles.readnext}>
+              <div className={styles.readnext__head}>
+                <Image
+                  src={arrow}
+                  width={15}
+                  height={25}
+                  alt="arrow"
+                  priority
+                />
                 <span className={styles.readnext__headtext}>Read next</span>
-              </a>
-            </Link>
-          </div>
+              </div>
 
-          <div className={styles.read__next}>
-            {shuffle(Array.from(nextTips))
-              .slice(0, 1)
-              .map((next: { _id: string }) => {
-                return <NextTip tip={next} key={next._id} />;
-              })}
-          </div>
-        </section>
-      </article>
+              <div className={styles.read__next}>
+                {shuffle(Array.from(tips))
+                  .slice(0, 1)
+                  .map((next: { title: string; _id: string }) => {
+                    const checkTitle = next.title !== tip.title;
+                    return checkTitle && <NextTip tip={next} key={next._id} />;
+                  })}
+              </div>
+            </section>
+          </article>
+        )}
+      </div>
       <div className={styles.article__page__bottom}>
         <Subscription />
         <Footer />

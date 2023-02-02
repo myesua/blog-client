@@ -16,11 +16,23 @@
   text-align: center;
 }
 
+.info {
+  color: #2e8b57;
+  font-size: 14px;
+}
+
+.error {
+  color: var(--error-color);
+  font-size: 14px;
+}
+
 .subscription__input {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 1.5rem;
+  max-width: 25rem;
+  margin: 0 auto;
 }
 
 .subscription__input input {
@@ -47,17 +59,20 @@
 .subscription__submit {
   border-radius: 50%;
   background: #fff;
-  width: 50px;
   display: flex;
   align-items: center;
-  cursor: pointer;
 }
 
 .subscription__arrow {
   font-size: 2rem;
   color: #283c86;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
 }
 .subscription__agreement {
+  max-width: 30rem;
+  margin: 0 auto;
   display: flex;
   align-items: flex-start;
   margin-top: 1rem;
@@ -65,7 +80,9 @@
 }
 
 .subscription__label {
-  display: block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: relative;
   padding-left: 35px;
   margin-bottom: 12px;
@@ -147,10 +164,10 @@
 
 /* Style the checkmark/indicator */
 .subscription__label .checkmark:after {
-  left: 6px;
-  top: 2px;
+  left: 5.5px;
+  top: 0;
   width: 5px;
-  height: 10px;
+  height: 11px;
   border: solid #283c86;
   border-width: 0 3px 3px 0;
   -webkit-transform: rotate(45deg);

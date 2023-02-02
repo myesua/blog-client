@@ -1,95 +1,28 @@
 import Link from 'next/link';
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import styles from './Header.module.css';
-import MenuIcon from '../../public/menu-icon.svg';
-import Image from 'next/image';
-import { Context } from '../../context/context';
+import MenuIcon from '../../public/icons/menuicon.svg';
+import Image from 'next/legacy/image';
+
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import { Context } from '../../context/context';
 
 const Header = () => {
   const ref = useRef<HTMLDivElement>(null);
   const [isOpen, setOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const [blur, setBlur] = useState(false);
+
+  const { state } = useContext(Context);
+  const { auth } = state;
   const router = useRouter();
-
-  const [query, setQuery] = useState('');
-  const [searchResult, setSearchResult] = useState([]);
-
-  const { user, dispatch }: any = useContext(Context);
-
-  useEffect(() => {
-    const checkOutsideClick = (e: any) => {
-      if (isOpen && ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', checkOutsideClick);
-
-    return () => {
-      document.removeEventListener('mousedown', checkOutsideClick);
-    };
-  }, [isOpen]);
 
   useEffect(() => {
     setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    const searchInput = document.getElementById(
-      'search-input',
-    ) as HTMLInputElement;
-    const searchOutputBox = document.getElementById(
-      'search-output-box',
-    ) as HTMLDivElement;
-    const overlay = document.getElementById('blur-overlay') as HTMLDivElement;
-
-    const removeOverlay = () => {
-      setBlur(false);
-      overlay.removeAttribute('style');
-      searchOutputBox.setAttribute('style', 'display: none');
-    };
-    const applyOverlay = (e) => {
-      if (e.target.value == '') {
-        setBlur(false);
-        overlay.removeAttribute('style');
-      }
-      setBlur(true);
-      overlay.setAttribute('style', 'display: block');
-    };
-    overlay.addEventListener('click', removeOverlay);
-    searchInput.addEventListener('input', applyOverlay);
-  }, [blur]);
-
-  useEffect(() => {
-    const getSearchResults = async () => {
-      if (!query || query.length === 0) {
-        setSearchResult([]);
-        return false;
-      }
-      const res = await axios.get(`${process.env.API_URI}/posts`, {
-        params: {
-          search: query,
-        },
-      });
-      setSearchResult(res.data);
-    };
-    getSearchResults();
-  }, [query]);
-
-  const handleChange = (e: {
-    target: { value: React.SetStateAction<string> };
-  }) => setQuery(e.target.value);
+  }, [hydrated]);
 
   const handleHiddenNav = () => {
     setOpen(!isOpen);
-  };
-
-  const handleLogout = () => {
-    dispatch({ type: 'LOGOUT' });
-    router.push('/account');
   };
 
   return (
@@ -98,14 +31,14 @@ const Header = () => {
         <div className={styles.logo}>
           <Image
             src={MenuIcon}
-            width={40}
-            height={40}
+            width={25}
+            height={25}
             layout="fixed"
             alt=""
             onClick={handleHiddenNav}
             priority
           />
-          <Link href="/">
+          <Link href="/" legacyBehavior>
             <span>
               <a>Bechellente</a>
             </span>
@@ -114,31 +47,29 @@ const Header = () => {
 
         <ul className={styles.toplinks}>
           <li>
-            <Link href="/">
+            <Link href="/" legacyBehavior>
               <a>Home</a>
             </Link>
           </li>
           <li>
-            <Link href="/products">
+            <Link href="/products" legacyBehavior>
               <a>Products</a>
             </Link>
           </li>
           <li>
-            <Link href="/services">
+            <Link href="/services" legacyBehavior>
               <a>Services</a>
             </Link>
           </li>
-          {hydrated && !user && (
+          {hydrated && auth === 'false' ? (
             <li>
-              <Link href="/account">
-                <a>Account</a>
+              <Link href="/login" legacyBehavior>
+                <a>Login</a>
               </Link>
             </li>
-          )}
-
-          {hydrated && user && (
+          ) : (
             <li>
-              <Link href="/dashboard">
+              <Link href="/dashboard" legacyBehavior>
                 <a>Dashboard</a>
               </Link>
             </li>
@@ -150,86 +81,53 @@ const Header = () => {
             type="search"
             placeholder="Search blog posts"
             id="search-input"
-            onChange={handleChange}
           />
         </span>
-        <div className={styles.search__output__wrapper} id="search-output-box">
-          {searchResult.map((post) => (
-            <Link href={`/post/${post.slug}`}>
-              <a>
-                <div className={styles.search__output__box}>
-                  <div className={styles.search__output__box__text}>
-                    <div className={styles.search__output__box__text__title}>
-                      {post.title}
-                    </div>
-                    <div className={styles.search__output__box__text__desc}>
-                      {post.description}
-                    </div>
-                    <div className={styles.search__output__box__others}>
-                      <span>
-                        {new Date(post.createdAt).toDateString().slice(4)}
-                      </span>
-                      <span>{post.visits} views</span>
-                      <span>{post.readingTime}</span>
-                    </div>
-                  </div>
-                  <div className={styles.search__output__box__icon}>↲</div>
-                </div>
-              </a>
-            </Link>
-          ))}
-        </div>
-        <div className={styles.blur__overlay} id="blur-overlay"></div>
         {isOpen && (
           <div className={styles.hiddenNav} ref={ref}>
-            <span
+            {/* <span
               className={styles.hiddenNav__closebtn}
               onClick={handleHiddenNav}>
               ⨉
-            </span>
+            </span> */}
             <ul>
               <li>
-                <Link href="/">
+                <Link href="/" legacyBehavior>
                   <a onClick={handleHiddenNav}>Home</a>
                 </Link>
               </li>
               <li>
-                <Link href="/">
+                <Link href="/" legacyBehavior>
                   <a onClick={handleHiddenNav}>About us</a>
                 </Link>
               </li>
 
               <li>
-                {user ? (
-                  <Link href="/dashboard">
-                    <a onClick={handleHiddenNav}>Dashboard</a>
+                {auth === 'false' ? (
+                  <Link href="/login" legacyBehavior>
+                    <a onClick={handleHiddenNav}>Login</a>
                   </Link>
                 ) : (
-                  <Link href="/account">
-                    <a onClick={handleHiddenNav}>Account</a>
+                  <Link href="/dashboard" legacyBehavior>
+                    <a onClick={handleHiddenNav}>Dashboard</a>
                   </Link>
                 )}
               </li>
               <li>
-                <Link href="#latest">
+                <Link href="#latest" legacyBehavior>
                   <a onClick={handleHiddenNav}>Latest</a>
                 </Link>
               </li>
               <li>
-                <Link href="#popular">
+                <Link href="#popular" legacyBehavior>
                   <a onClick={handleHiddenNav}>Popular</a>
                 </Link>
               </li>
               <li>
-                <Link href="#tips">
+                <Link href="#tips" legacyBehavior>
                   <a onClick={handleHiddenNav}>Tips</a>
                 </Link>
               </li>
-              {user && (
-                <li>
-                  <a onClick={handleLogout}>Logout</a>
-                </li>
-              )}
             </ul>
           </div>
         )}

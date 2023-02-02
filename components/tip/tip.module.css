@@ -66,6 +66,13 @@
   height: 25px;
 }
 
+@media screen and (max-width: 300px) {
+  .tip {
+    width: 250px;
+    height: 300px;
+  }
+}
+
 @media screen and (min-width: 790px) {
   .tip {
     width: 355px;
@@ -86,12 +93,6 @@
   }
 }
 
-@media screen and (min-width: 915px) {
-  .tip {
-    width: 250px;
-  }
-}
-
 @media screen and (min-width: 926px) {
   .tip {
     width: 280px;
@@ -106,7 +107,7 @@
 
 @media screen and (min-width: 1024px) {
   .tip {
-    width: 330px;
+    width: 315px;
   }
 
   .tipheader {
@@ -129,7 +130,7 @@
 
 @media screen and (min-width: 1280px) {
   .tip {
-    width: 300px;
+    width: 350px;
   }
 }
 

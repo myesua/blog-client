@@ -1,63 +1,28 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { Key, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import Image from 'next/future/image';
+import Image from 'next/legacy/image';
 
 import styles from './single.module.css';
-import 'react-quill/dist/quill.snow.css';
+import hStyles from '../header/Header.module.css';
+import sStyles from '../search/styles.module.css';
 
-import facebook from '../../public/images/facebook.svg';
-import linkedin from '../../public/images/linkedin.svg';
-import twitter from '../../public/images/twitter.svg';
+import facebook from '../../public/icons/facebook.svg';
+import linkedin from '../../public/icons/linkedin.svg';
+import twitter from '../../public/icons/twitter.svg';
 import advertsample from '../../public/images/advertsample.png';
-import arrow from '../../public/down.svg';
-import EditIcon from '../../public/edit.svg';
-import DeleteIcon from '../../public/delete.svg';
+import arrow from '../../public/icons/down.svg';
+import MenuIcon from '../../public/icons/menuicon.svg';
 
 import axios from 'axios';
 import DOMPurify from 'dompurify';
-import dynamic from 'next/dynamic';
 
-import { Context } from '../../context/context';
 import Header from '../header/Header';
 import Tip from '../tip/tip';
 import NextPost from '../post/nextPost';
 import Subscription from '../subscription/subscription';
 import Footer from '../footer/Footer';
-
-const ReactQuill = dynamic(() => import('react-quill'), {
-  ssr: false,
-});
-
-const modules = {
-  toolbar: [
-    [{ font: [] }],
-    [{ header: [1, 2, 3, 4, 5, 6, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ color: [] }, { background: [] }],
-    [{ script: 'sub' }, { script: 'super' }],
-    ['blockquote', 'code-block'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    [{ indent: '-1' }, { indent: '+1' }, { align: [] }],
-    ['link', 'image', 'video'],
-    ['clean'],
-  ],
-};
-
-const readingDuration = [
-  {
-    value: '2 mins read',
-  },
-  {
-    value: '3 mins read',
-  },
-  {
-    value: '5 mins read',
-  },
-  {
-    value: '7 mins read',
-  },
-];
+import { Context } from '../../context/context';
 
 function shuffle(a: any) {
   let j, x, i;
@@ -70,162 +35,85 @@ function shuffle(a: any) {
   return a;
 }
 
-const SinglePost = ({ post }: any) => {
-  const [isOpen, setOpen] = useState(false);
-  const [rating, setRating] = useState(0);
+const SinglePost = ({ post }) => {
+  const { posts } = useContext(Context);
+  const [rating, setRating] = useState(post.rating || 0);
   const [hover, setHover] = useState(0);
-  const [cats, setCats] = useState([]);
-  const [tips, setTips] = useState([]);
-  const [nextPosts, setNextPosts] = useState([]);
-
-  const { user } = useContext(Context);
-  let authorAvatar = user && user.profilePicture;
   const router = useRouter();
-  const ref = useRef<HTMLDivElement>(null);
+  const [info, setInfo] = useState('');
+  const [ratingInfo, setRatingInfo] = useState('');
 
-  const [title, setTitle] = useState(post.title);
-  const [desc, setDesc] = useState(post.description);
-  const [banner, setBanner] = useState(post.banner);
-  const [categs, setCategs] = useState(post.categories);
-  const [rt, setRT] = useState(post.readingTime);
-  const [content, setContent] = useState(post.content);
-  const author = user && user.firstname + ' ' + user.lastname;
+  const ref2 = useRef<HTMLDivElement>(null);
+  const [isOpen, setOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
-  const [loaded, setLoaded] = useState(false);
+  const rRef = useRef<HTMLDivElement>(null);
+  const rRefEl = rRef.current;
 
-  /**Get data from server */
+  const [query, setQuery] = useState('');
+  const [searchResult, setSearchResult] = useState([]);
+
+  const { state } = useContext(Context);
+  const { auth } = state;
+
   useEffect(() => {
-    const getCategories = async () => {
-      const res = await axios.get(`${process.env.API_URI}/categories`);
-      setCats(res.data);
-    };
-    const getTips = async () => {
-      const res = await axios.get(`${process.env.API_URI}/tips`);
-      setTips(res.data);
-    };
+    setHydrated(true);
+  }, [hydrated]);
 
-    const getNextPost = async () => {
-      const res = await axios.get(`${process.env.API_URI}/posts`);
-      setNextPosts(res.data);
-    };
-    getNextPost();
-
-    getTips();
-    getCategories();
-  }, []);
-
-  /**Handle delete modal */
   useEffect(() => {
-    const checkOutsideClick = (e: { target: any }) => {
-      if (isOpen && ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
+    const getSearchResults = async () => {
+      if (!query || query.length === 0 || query.length > 3) {
+        setSearchResult([]);
+        return false;
+      }
+      if (query.length > 2) {
+        const res = await axios.get(`${process.env.POSTS_URL}`, {
+          params: {
+            search: query,
+          },
+        });
+        setSearchResult(res.data);
       }
     };
+    getSearchResults();
+  }, [query]);
 
-    document.addEventListener('mousedown', checkOutsideClick);
+  const handleInput = (e: any) => {
+    setQuery(e.target.value);
+  };
 
-    return () => {
-      document.removeEventListener('mousedown', checkOutsideClick);
-    };
-  }, [isOpen]);
-
-  const handleModal = () => {
+  const handleHiddenNav = () => {
     setOpen(!isOpen);
   };
 
-  /**Function to toggle `updateForm` when author clicks edit button */
-
-  useEffect(() => {
-    const overlay = document.getElementById('blur-overlay') as HTMLDivElement;
-    const editIcon = document.getElementById('edit-icon') as HTMLImageElement;
-    const updateForm = document.getElementById('update') as HTMLElement;
-    const toggleUpdateForm = () => {
-      setLoaded(true);
-      overlay.style.display = 'block';
-      updateForm.style.display = 'block';
-      document.body.style.overflow = 'hidden';
-    };
-
-    post.author === author &&
-      editIcon.addEventListener('click', toggleUpdateForm);
-
-    let newCategories: string[] = [];
-    const categoriesEl =
-      document.querySelectorAll<HTMLElement>('#category-option');
-
-    categoriesEl.forEach((option) => {
-      let selected = false;
-      const CustomSelect = () => {
-        if (!selected) {
-          selected = true;
-          if (
-            !newCategories.includes(option.innerText) &&
-            !option.hasAttribute('style')
-          ) {
-            newCategories.push(option.innerText);
-            setCategs(newCategories);
-            option.setAttribute(
-              'style',
-              'background: #396afc; color: #fff; transition: background 0.1s',
-            );
-          }
-        } else if (option.hasAttribute('style')) {
-          selected = false;
-          newCategories.pop();
-          setCategs(newCategories);
-          option.removeAttribute('style');
-        }
-      };
-      if (post.categories.includes(option.innerText)) {
-        selected = true;
-        newCategories.push(option.innerText);
-        setCategs(newCategories);
-        option.setAttribute(
-          'style',
-          'background: #396afc; color: #fff; transition: background 0.1s',
-        );
-      }
-
-      option.addEventListener('click', CustomSelect);
-
-      return {
-        newCategories,
-      };
-    });
-  }, [loaded]);
-
-  /**Handle post update */
-  const handleUpdate = async () => {
+  const handleRating = async () => {
     try {
-      await axios.put(`${process.env.API_URI}/posts/${post._id}`, {
-        author: author,
-        title: title,
-        description: desc,
-        banner: banner,
-        categories: categs,
-        readingTime: rt,
-        content: content,
-        slug: title.toLowerCase().split(' ').join('-').replace(/\?/g, ''),
-        avatar: authorAvatar,
-      });
-      console.log('🎉', 'Your post has been updated successfully!');
-      window.location.replace('/');
+      const res = await axios.post(
+        `${process.env.POSTS_URL}/post/${post._id}`,
+        {
+          rating,
+        },
+      );
+      setRatingInfo(res.data.message);
     } catch (err) {
-      console.log(err);
+      if (err.message === 'Network Error')
+        return <h1 style={iStyles}>500 - Server-side error occurred</h1>;
+      else if (
+        err.response.data ==
+        'Too many requests coming from this IP, please try again after 15 minutes.'
+      ) {
+        setInfo(err.response.data);
+      } else setInfo(err.response.data.message);
     }
   };
 
-  /**Handle post delete */
-  const handleDelete = async () => {
-    try {
-      await axios.delete(`${process.env.API_URI}/posts/${post._id}`, {
-        data: { author: author },
-      });
-      router.push('/');
-    } catch (err) {
-      console.log(err);
-    }
-  };
+  const rInfoStyle = ratingInfo
+    ? `${styles.rating__info} ${styles.animate}`
+    : styles.rating__info;
+
+  if (ratingInfo && rRef && rRefEl) {
+    rRefEl.addEventListener('animationend', () => window.location.reload());
+  }
 
   /**Prevent XSS from Editor*/
   const sanitizeData = () => ({
@@ -253,288 +141,399 @@ const SinglePost = ({ post }: any) => {
     )}&title=${encodeURIComponent(url)}`;
   };
 
+  const iStyles = {
+    display: 'grid',
+    placeItems: 'center',
+    height: '100vh',
+    width: '100%',
+    color: 'var(--error-color)',
+  };
+
+  if (info) {
+    return (
+      <div style={iStyles}>
+        <div>{info}</div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.headerDiv}>
-        <Header />
-      </div>
-      <div className={styles.formContainer}>
-        <div className={styles.form} id="update">
-          <h1 className={styles.form__header}>Update post</h1>
-          <div
-            className={styles.input}
-            contentEditable="true"
-            onInput={(e: any) => setTitle(e.target.innerText)}
-            suppressContentEditableWarning={true}>
-            {post.title}
-          </div>
-
-          <div
-            className={styles.input}
-            contentEditable="true"
-            onInput={(e: any) => setDesc(e.target.innerText)}
-            suppressContentEditableWarning={true}>
-            {post.description}
-          </div>
-          <div
-            className={styles.input}
-            contentEditable="true"
-            onInput={(e: any) => setBanner(e.target.innerText)}
-            suppressContentEditableWarning={true}>
-            {post.banner}
-          </div>
-
-          <div className={styles.categories__options} id="categories-options">
-            {cats.map((cat: any) => {
-              return (
-                <span
-                  key={cat._id}
-                  className={styles.cat__option}
-                  id="category-option">
-                  {cat.name.toLowerCase()}
+        <div className={hStyles.header}>
+          <nav className={hStyles.nav}>
+            <div className={hStyles.logo}>
+              <Image
+                src={MenuIcon}
+                width={25}
+                height={25}
+                layout="fixed"
+                alt=""
+                onClick={handleHiddenNav}
+                priority
+              />
+              <Link href="/" legacyBehavior>
+                <span>
+                  <a>Bechellente</a>
                 </span>
-              );
-            })}
-          </div>
+              </Link>
+            </div>
+            <ul className={hStyles.toplinks}>
+              <li>
+                <Link href="/" legacyBehavior>
+                  <a>Home</a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/products" legacyBehavior>
+                  <a>Products</a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/services" legacyBehavior>
+                  <a>Services</a>
+                </Link>
+              </li>
+              {hydrated && auth === 'false' ? (
+                <li>
+                  <Link href="/login" legacyBehavior>
+                    <a>Login</a>
+                  </Link>
+                </li>
+              ) : (
+                <li>
+                  <Link href="/dashboard" legacyBehavior>
+                    <a>Dashboard</a>
+                  </Link>
+                </li>
+              )}
+            </ul>
+            <span className={hStyles.topsearch}>
+              <input
+                type="search"
+                placeholder="Search blog posts"
+                id="search-input"
+                onInput={handleInput}
+              />
+            </span>
+            {isOpen && (
+              <div className={hStyles.hiddenNav} ref={ref2}>
+                <ul>
+                  <li>
+                    <Link href="/" legacyBehavior>
+                      <a onClick={handleHiddenNav}>Home</a>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/" legacyBehavior>
+                      <a onClick={handleHiddenNav}>About us</a>
+                    </Link>
+                  </li>
 
-          <div>
-            <select
-              className={styles.options}
-              name="reading-time"
-              onChange={(e) => setRT(e.target.value)}
-              required>
-              <option value={post.readingTime}>{post.readingTime}</option>
-              {readingDuration.map((duration, index) => {
-                while (duration.value !== post.readingTime) {
-                  return (
-                    <option value={duration.value} key={index}>
-                      {duration.value}
-                    </option>
-                  );
-                }
-              })}
-            </select>
-          </div>
-          <ReactQuill
-            modules={modules}
-            theme="snow"
-            defaultValue={post.content}
-            onChange={setContent}
-            placeholder="Content goes here..."
-          />
-
-          <div className={styles.submitButtonContainer}>
-            <button onClick={handleUpdate} className={styles.submitButton}>
-              Submit
-            </button>
-          </div>
+                  <li>
+                    {auth === 'false' ? (
+                      <Link href="/login" legacyBehavior>
+                        <a onClick={handleHiddenNav}>Login</a>
+                      </Link>
+                    ) : (
+                      <Link href="/dashboard" legacyBehavior>
+                        <a onClick={handleHiddenNav}>Dashboard</a>
+                      </Link>
+                    )}
+                  </li>
+                  <li>
+                    <Link href="#latest" legacyBehavior>
+                      <a onClick={handleHiddenNav}>Latest</a>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#popular" legacyBehavior>
+                      <a onClick={handleHiddenNav}>Popular</a>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#tips" legacyBehavior>
+                      <a onClick={handleHiddenNav}>Tips</a>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </nav>
         </div>
       </div>
-      <div className={styles.blur__overlay} id="blur-overlay"></div>
-      <div className={styles.container}>
-        <header className={styles.header}>
-          <div className={styles.top__section}>
-            <h1>{post.title}</h1>
-            {post.author === author && (
-              <div className={styles.owner__icons}>
-                <Image
-                  src={EditIcon}
-                  width={30}
-                  height={20}
-                  alt=""
-                  id="edit-icon"
-                  priority
-                />
-                <Image
-                  src={DeleteIcon}
-                  width={30}
-                  height={20}
-                  alt=""
-                  onClick={handleModal}
-                  priority
-                />
+      <div className={sStyles.parent__wrapper}>
+        {query ? (
+          <div>
+            <h1 className={sStyles.hOnes} id="tips">
+              Search Results for - '{query}'
+            </h1>
+            {query && searchResult.length == 0 ? (
+              <div className={sStyles.no__result}>
+                No result found. Try again with another query.
+              </div>
+            ) : (
+              <div
+                className={sStyles.search__output__wrapper}
+                id="search-output-box">
+                {searchResult.map(
+                  (result: {
+                    _id: string;
+                    type: string;
+                    title: string;
+                    slug: string;
+                    description: string;
+                    content: string;
+                    author: string;
+                    categories: Array<string>;
+                    avatar: string;
+                    readingTime: string;
+                    views: number;
+                    createdAt: Date;
+                  }) => {
+                    let a = 'post',
+                      b = 'tip';
+                    let type: string;
+                    if (result.type === a) {
+                      type = a;
+                    } else {
+                      type = b;
+                    }
+                    return (
+                      <Link href={`/${type}/${result.slug}`} key={result._id}>
+                        <div className={sStyles.search__output__box}>
+                          <div className={sStyles.search__output__box__text}>
+                            <div
+                              className={
+                                sStyles.search__output__box__text__title
+                              }>
+                              {result.title}
+                            </div>
+                            <div
+                              className={
+                                sStyles.search__output__box__text__desc
+                              }>
+                              {result.description}
+                            </div>
+                            <div
+                              className={sStyles.search__output__box__others}>
+                              <span>
+                                {new Date(result.createdAt)
+                                  .toDateString()
+                                  .slice(4)}
+                              </span>
+                              <span>{result.views} views</span>
+                              <span>{result.readingTime}</span>
+                            </div>
+                          </div>
+                          <div className={sStyles.search__output__box__icon}>
+                            <i className="fa-solid fa-circle-arrow-right"></i>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  },
+                )}
               </div>
             )}
           </div>
-          {isOpen && (
-            <div className={styles.modal} ref={ref}>
-              <span
-                className={styles.hiddenNav__closebtn}
-                onClick={handleModal}>
-                ⨉
-              </span>
-              <div className={styles.prompt}>
-                Are you sure you wanted to delete this post?
+        ) : (
+          <div className={styles.container}>
+            <header className={styles.header}>
+              <div className={styles.top__section}>
+                <h1>{post.title}</h1>
               </div>
-              <div className={styles.button__container}>
-                <button onClick={handleDelete}>Yes</button>
-                <button onClick={handleModal}>No</button>
-              </div>
-            </div>
-          )}
-          <p className={styles.post__description}>{post.description}</p>
-        </header>
+              <p className={styles.post__description}>{post.description}</p>
+            </header>
 
-        <section className={styles.main}>
-          <div className={styles.author}>
-            <div className={styles.author__info}>
-              <Link href={`/?user=${post.author}`}>
-                <a>
-                  <img
-                    src={post.avatar}
-                    className={styles.avatar}
-                    alt="Profile Image"
-                  />
-                </a>
-              </Link>
-              <span>{post.author}</span>
-            </div>
-            <time>
-              {post.updatedAt > post.createdAt
-                ? 'Last edited on' +
-                  ' ' +
-                  new Date(post.updatedAt).toDateString().slice(4)
-                : new Date(post.createdAt).toDateString().slice(4)}
-            </time>
-          </div>
-          <div className={styles.top}>
-            <Image
-              src={post.banner}
-              width="0"
-              height="0"
-              sizes="100vw"
-              className={styles.top__image}
-              alt="Post Image"
-            />
-          </div>
-
-          <div className={styles.article}>
-            <div className={styles.article__body}>
-              <div
-                className={styles.body}
-                dangerouslySetInnerHTML={sanitizeData()}></div>
-
-              <div className={styles.footer}>
-                <span className={styles.footer__head}>
-                  Please let us know what you think about this article
-                </span>
-                <br />
-                <span className={styles.footer__text}>
-                  How would you rate this aricle?
-                </span>
-                <div className={styles.stars} id="stars">
-                  {[...Array(5)].map((star, index) => {
-                    index += 1;
-                    return (
-                      <button
-                        type="button"
-                        key={index}
-                        className={
-                          index <= (rating || hover) ? styles.on : styles.off
-                        }
-                        onClick={() => setRating(index)}
-                        onMouseEnter={() => setHover(index)}
-                        onMouseLeave={() => setHover(rating)}
-                        onDoubleClick={() => {
-                          setRating(0);
-                          setHover(0);
-                        }}>
-                        <span className={styles.star}>&#9733;</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <Link href="/">
-                  <button className={styles.continue} type="button">
-                    Continue
-                  </button>
-                </Link>
-              </div>
-            </div>
-            <aside className={styles.aside}>
-              <div className={styles.tags}>
-                <ul className={styles.tags__links}>
-                  {post.categories.map((cat: any) => {
-                    return (
-                      <Link href={`/?cat=${cat}`} key={cat._id}>
-                        <a>
-                          <li>{cat}</li>
-                        </a>
-                      </Link>
-                    );
-                  })}
-                </ul>
-              </div>
-              <div className={styles.share}>
-                <h5>Share article</h5>
-                <ul className={styles.share__links}>
-                  <li>
-                    <img
-                      alt="facebook"
-                      src={facebook.src}
-                      onClick={shareOnFB}
-                    />
-                  </li>
-                  <li>
-                    <img
-                      alt="twitter"
-                      src={twitter.src}
-                      onClick={shareOnTwitter}
-                    />
-                  </li>
-                  <li>
-                    <img
-                      alt="linkedin"
-                      src={linkedin.src}
-                      onClick={shareOnLinkedIn}
-                    />
-                  </li>
-                  <li>
-                    <a
-                      className="twitter-share-button"
-                      href="https://twitter.com/intent/tweet">
-                      Tweet
+            <section className={styles.main}>
+              <div className={styles.author}>
+                <div className={styles.author__info}>
+                  <Link href={`/?author=${post.author}`} legacyBehavior>
+                    <a>
+                      <img
+                        src={post.avatar}
+                        className={styles.avatar}
+                        alt="Profile Image"
+                      />
                     </a>
-                  </li>
-                </ul>
-              </div>
-              <div className={styles.advertsample}>
-                <a href="#">
-                  <img src={advertsample.src} alt="Image" />
-                </a>
-              </div>
-              <div className={styles.related}>
-                <h5>Related</h5>
-                <div className={styles.related__child}>
-                  {tips.slice(0, 3).map((tip: any) => {
-                    const match = tip.categories.some((i: any) =>
-                      post.categories.includes(i),
-                    );
-                    if (match == true) return <Tip tip={tip} key={tip._id} />;
-                  })}
+                  </Link>
+                  <span>{post.author}</span>
                 </div>
+                {post.lastUpdated && (
+                  <time>
+                    Last edited on
+                    {' ' + new Date(post.lastUpdated).toDateString().slice(4)}
+                  </time>
+                )}
               </div>
-            </aside>
-          </div>
-        </section>
+              <div className={styles.top}>
+                <Image
+                  src={post.banner}
+                  width="0"
+                  height="0"
+                  sizes="100vw"
+                  className={styles.top__image}
+                  alt="Post Image"
+                  priority
+                />
+              </div>
 
-        <section className={styles.readnext}>
-          <div>
-            <Link href={`/post/${post.slug}`}>
-              <a className={styles.readnext__head}>
-                <Image src={arrow} width={15} height={25} alt="arrow" />
+              <div className={styles.article}>
+                <div className={styles.article__body}>
+                  <div
+                    className={styles.body}
+                    dangerouslySetInnerHTML={sanitizeData()}></div>
+
+                  <div className={styles.footer}>
+                    <span className={styles.footer__head}>
+                      Please let us know what you think about this article
+                    </span>
+                    <br />
+                    <span className={styles.footer__text}>
+                      How would you rate this aricle?
+                    </span>
+                    <div className={styles.stars} id="stars">
+                      {[...Array(5)].map((star, index) => {
+                        index += 1;
+                        return (
+                          <button
+                            type="button"
+                            key={index}
+                            className={
+                              index <= (rating || hover)
+                                ? styles.on
+                                : styles.off
+                            }
+                            onClick={() => {
+                              setRating(index);
+                            }}
+                            onMouseEnter={() => setHover(index)}
+                            onMouseLeave={() => setHover(rating)}
+                            onDoubleClick={() => {
+                              setRating(0);
+                              setHover(0);
+                            }}>
+                            <span className={styles.star}>&#9733;</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      className={styles.continue}
+                      type="submit"
+                      onClick={handleRating}>
+                      Rate
+                    </button>
+                    {ratingInfo && (
+                      <span className={rInfoStyle} ref={rRef}>
+                        {ratingInfo}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <aside className={styles.aside}>
+                  <div className={styles.tags}>
+                    <ul className={styles.tags__links}>
+                      {post.categories.map((cat: string, index: number) => {
+                        return (
+                          <Link
+                            href={`/?cat=${cat}`}
+                            key={index}
+                            legacyBehavior>
+                            <a>
+                              <li>{cat}</li>
+                            </a>
+                          </Link>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                  <div className={styles.share}>
+                    <h5>Share article</h5>
+                    <ul className={styles.share__links}>
+                      <li>
+                        <img
+                          alt="facebook"
+                          src={facebook.src}
+                          onClick={shareOnFB}
+                        />
+                      </li>
+                      <li>
+                        <img
+                          alt="twitter"
+                          src={twitter.src}
+                          onClick={shareOnTwitter}
+                        />
+                      </li>
+                      <li>
+                        <img
+                          alt="linkedin"
+                          src={linkedin.src}
+                          onClick={shareOnLinkedIn}
+                        />
+                      </li>
+                    </ul>
+                  </div>
+                  <div className={styles.advertsample}>
+                    <a href="#">
+                      <img src={advertsample.src} alt="Image" />
+                    </a>
+                  </div>
+                  <div className={styles.related}>
+                    <h5>Related</h5>
+                    <div className={styles.related__child}>
+                      {posts
+                        .slice(0, 3)
+                        .map(
+                          (next: {
+                            _id: string;
+                            title: string;
+                            slug: string;
+                            description: string;
+                            content: string;
+                            author: string;
+                            categories: Array<string>;
+                            avatar: string;
+                            readingTime: string;
+                          }) => {
+                            const match = post.categories.some((i: string) => {
+                              next.categories.includes(i);
+                            });
+                            if (match == true && next.title !== post.title)
+                              return <NextPost post={next} key={next._id} />;
+                          },
+                        )}
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </section>
+
+            <section className={styles.readnext}>
+              <div className={styles.readnext__head}>
+                <Image
+                  src={arrow}
+                  width={15}
+                  height={25}
+                  alt="arrow"
+                  priority
+                />
                 <span className={styles.readnext__headtext}>Read next</span>
-              </a>
-            </Link>
+              </div>
+              <div className={styles.read__next}>
+                {shuffle(Array.from(posts))
+                  .slice(0, 1)
+                  .map((next: { title: string; _id: string }) => {
+                    const checkTitle = next.title !== post.title;
+                    return (
+                      checkTitle && <NextPost post={next} key={next._id} />
+                    );
+                  })}
+              </div>
+            </section>
           </div>
-          <div className={styles.read__next}>
-            {shuffle(Array.from(nextPosts))
-              .slice(0, 1)
-              .map((next: { _id: string }) => {
-                return <NextPost post={next} key={next._id} />;
-              })}
-          </div>
-        </section>
+        )}
       </div>
       <div className={styles.article__page__bottom}>
         <Subscription />

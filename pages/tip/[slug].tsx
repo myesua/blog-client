@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { GetStaticProps } from 'next';
 import dynamic from 'next/dynamic';
+// import SingleTip from '../../components/single/singleTip';
 
 const SingleTip = dynamic(() => import('../../components/single/singleTip'), {
   ssr: false,
@@ -13,9 +14,8 @@ const TipSlug = ({ tip }: any) => {
 export async function getStaticPaths() {
   // Call an external API endpoint to get posts
 
-  const response = await axios(`${process.env.API_URI}/tips`);
-  const tips = await response.data;
-  // console.log(tips);
+  const response = await axios(`${process.env.TIPS_URL}`);
+  const tips = await response.data.tips;
   // Get the paths we want to pre-render based on posts
 
   const paths = tips.map((tip: { slug: string }) => ({
@@ -31,10 +31,8 @@ export async function getStaticPaths() {
 export const getStaticProps: GetStaticProps = async (context) => {
   const params = context.params;
 
-  const response = await axios(
-    `${process.env.API_URI}/tips/tip/${params?.slug}`,
-  );
-  const tip = response.data;
+  const response = await axios(`${process.env.TIPS_URL}/tip/${params?.slug}`);
+  const tip = response.data.tip;
 
   // Pass post data to the page via props
   return { props: { tip }, revalidate: 1 };

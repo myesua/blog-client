@@ -1,0 +1,166 @@
+.container {
+  width: 100%;
+  height: 100vh;
+  background-color: #fff;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+.message {
+  position: absolute;
+  top: 0;
+  background-color: #f1db80;
+  width: 100%;
+  padding: 2rem 3rem;
+  text-align: center;
+  font-size: 1.2rem;
+  transform: translateY(-100px);
+  transition: transform 0.4s ease-in-out;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.aside {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.main {
+  flex: 3;
+  border-radius: 10px;
+  background-color: #eee;
+  padding: 1.4rem;
+  transition: all 0.5s ease-in-out;
+  scroll-behavior: smooth;
+}
+
+.redirect {
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  animation: fade 3s 2 ease-in-out;
+  background-color: var(--bg-color-secondary);
+  color: #fff;
+}
+
+@keyframes fade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.info__container {
+  display: grid;
+  place-items: center;
+  height: 100vh;
+  width: 100%;
+  color: var(--error-color);
+}
+
+/* Center the loader */
+
+.loader {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120px;
+  height: 120px;
+  margin: -76px 0 0 -76px;
+  border: 5px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 5px solid var(--bg-color-secondary);
+  -webkit-animation: spin 4s linear infinite;
+  animation: spin 4s linear infinite;
+}
+
+.loader__text {
+  position: absolute;
+  left: 50%;
+  top: 57%;
+  transform: translateX(-50%);
+  margin-top: 20px;
+}
+
+@-webkit-keyframes spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Add animation to "page content" */
+.animate__bottom {
+  position: relative;
+  -webkit-animation-name: animatebottom;
+  -webkit-animation-duration: 1s;
+  animation-name: animatebottom;
+  animation-duration: 1s;
+}
+
+@-webkit-keyframes animatebottom {
+  from {
+    bottom: -100px;
+    opacity: 0;
+  }
+  to {
+    bottom: 0px;
+    opacity: 1;
+  }
+}
+
+@keyframes animatebottom {
+  from {
+    bottom: -100px;
+    opacity: 0;
+  }
+  to {
+    bottom: 0;
+    opacity: 1;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .loader__text {
+    font-size: 13px;
+  }
+}
+
+@media screen and (min-width: 800px) {
+  .wrapper {
+    flex-direction: row;
+  }
+  .aside {
+    margin: 0 0.6rem;
+    margin-top: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+    gap: 2.5rem;
+    width: 230px;
+  }
+}
